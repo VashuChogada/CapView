@@ -1,4 +1,4 @@
-name: Build
+﻿name: Build
 
 # Every push/PR: build + check. Pushing a tag like v0.2.0: also publish a GitHub Release.
 on:
@@ -14,13 +14,13 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build, check and package
         shell: pwsh
         run: ./package.ps1 -Ci
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: CapView
           path: dist/*.zip
@@ -38,6 +38,6 @@ jobs:
           $notes = @"
           **Download** ``$($zip.Name)`` below, unzip it, and run ``CapView.exe``. No install needed.
 
-          First launch: if Windows says "Windows protected your PC", click **More info → Run anyway**.
+          First launch: if Windows says "Windows protected your PC", click **More info â†’ Run anyway**.
           "@
           gh release create $env:TAG $zip.FullName --title "CapView $env:TAG" --notes $notes --generate-notes
