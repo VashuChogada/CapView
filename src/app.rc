@@ -18,7 +18,7 @@ BEGIN
       VALUE "FileDescription", "CapView - plug-and-play capture card viewer"
       VALUE "FileVersion", CAPVIEW_VERSION_STR
       VALUE "InternalName", "CapView"
-      VALUE "LegalCopyright", "Copyright (C) 2026"
+      VALUE "LegalCopyright", "Copyright (C) 2026 Vashu Chogada. MIT License."
       VALUE "OriginalFilename", "CapView.exe"
       VALUE "ProductName", "CapView"
       VALUE "ProductVersion", CAPVIEW_VERSION_STR

@@ -31,3 +31,7 @@ Install Visual Studio with the **Desktop development with C++** workload, then r
 
 To publish a new version: bump `src/version.h`, commit, then push a matching tag
 (`git tag v0.3.0 && git push origin v0.3.0`). GitHub builds it and creates the release.
+
+## License
+
+[MIT](LICENSE): free to use, modify and share.

@@ -63,6 +63,7 @@ Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory $stage | Out-Null
 Copy-Item $exe.FullName $stage
 Copy-Item dist-readme.txt "$stage\README.txt"
+Copy-Item LICENSE "$stage\LICENSE.txt"
 $zip = "dist\CapView-$version.zip"
 Compress-Archive -Path "$stage\*" -DestinationPath $zip -Force
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
