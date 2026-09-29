@@ -1,0 +1,43 @@
+name: Build
+
+# Every push/PR: build + check. Pushing a tag like v0.2.0: also publish a GitHub Release.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build, check and package
+        shell: pwsh
+        run: ./package.ps1 -Ci
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CapView
+          path: dist/*.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $zip = Get-Item dist/*.zip
+          $expected = "CapView-$($env:TAG.TrimStart('v')).zip"
+          if ($zip.Name -ne $expected) { throw "Tag $env:TAG doesn't match src/version.h (built $($zip.Name))" }
+          $notes = @"
+          **Download** ``$($zip.Name)`` below, unzip it, and run ``CapView.exe``. No install needed.
+
+          First launch: if Windows says "Windows protected your PC", click **More info → Run anyway**.
+          "@
+          gh release create $env:TAG $zip.FullName --title "CapView $env:TAG" --notes $notes --generate-notes
