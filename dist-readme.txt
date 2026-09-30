@@ -8,7 +8,7 @@ First launch: Windows may say "Windows protected your PC". That's because
 CapView isn't from a big publisher. Click "More info" -> "Run anyway".
 
 Controls: move the mouse to show the control bar (hover a button to see
-what it does). Double-click = fullscreen, scroll = volume, M = mute,
+what it does). Double-click = fullscreen, scroll = volume (up to 200%), M = mute,
 S = screenshot, right-click = settings.
 
 Nothing showing?

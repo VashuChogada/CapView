@@ -5,6 +5,9 @@
 // The auto-hiding control bar. Layout lives here so the window (hit-testing)
 // and the renderer (drawing) always agree on where every button is.
 
+// Volume runs 0..kMaxVolume; above 1.0 the audio bridge boosts the samples.
+constexpr float kMaxVolume = 2.0f;
+
 enum class UiId { None, Mute, Volume, Screenshot, Stats, Pin, Settings, Fullscreen };
 
 struct RectF {

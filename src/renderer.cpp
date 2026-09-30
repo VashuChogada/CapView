@@ -559,11 +559,21 @@ void Renderer::DrawBar() {
         const float cx = (r.l + r.r) / 2, cy = (r.t + r.b) / 2;
         if (item.id == UiId::Volume) {
             const RectF& t = L.track;
-            const float knobX = t.l + t.W() * ui.volume, h = t.H() / 2;
+            const float knobX = t.l + t.W() * ui.volume / kMaxVolume, h = t.H() / 2;
+            const float unityX = t.l + t.W() / kMaxVolume;
             brush_->SetColor(White(0.22f * a));
             d2dTarget_->FillRoundedRectangle({ToD2D(t), h, h}, brush_.Get());
+            if (knobX > unityX) {  // boosted past 100%: tint the extra part amber
+                brush_->SetColor(ui.muted ? White(0.45f * a) : D2D1::ColorF(1.0f, 0.72f, 0.25f, 0.95f * a));
+                d2dTarget_->FillRoundedRectangle({D2D1::RectF(t.l, t.t, knobX, t.b), h, h}, brush_.Get());
+            }
             brush_->SetColor(ui.muted ? White(0.45f * a) : White(0.95f * a));
-            d2dTarget_->FillRoundedRectangle({D2D1::RectF(t.l, t.t, knobX, t.b), h, h}, brush_.Get());
+            d2dTarget_->FillRoundedRectangle({D2D1::RectF(t.l, t.t, std::min(knobX, unityX), t.b), h, h},
+                                             brush_.Get());
+            brush_->SetColor(White(0.6f * a));  // 100% tick
+            d2dTarget_->FillRectangle(D2D1::RectF(unityX - 0.75f * s, t.t - 3 * s, unityX + 0.75f * s, t.b + 3 * s),
+                                      brush_.Get());
+            brush_->SetColor(ui.muted ? White(0.45f * a) : White(0.95f * a));
             const float knob = (ui.hover == UiId::Volume ? 7.0f : 6.0f) * s;
             d2dTarget_->FillEllipse({{knobX, cy}, knob, knob}, brush_.Get());
             continue;

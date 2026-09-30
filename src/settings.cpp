@@ -27,7 +27,7 @@ void Settings::Load() {
     videoDevice = ReadStr(ini, L"VideoDevice");
     modeKey = ReadStr(ini, L"VideoMode");
     audioDevice = ReadStr(ini, L"AudioDevice");
-    volume = std::clamp(ReadInt(ini, L"VolumePercent", 100), 0, 100) / 100.0f;
+    volume = std::clamp(ReadInt(ini, L"VolumePercent", 100), 0, 200) / 100.0f;
     muted = ReadInt(ini, L"Muted", 0) != 0;
     keepAspect = ReadInt(ini, L"KeepAspect", 1) != 0;
     alwaysOnTop = ReadInt(ini, L"AlwaysOnTop", 0) != 0;

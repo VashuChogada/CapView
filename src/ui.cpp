@@ -1,5 +1,6 @@
 #include "ui.h"
 #include <algorithm>
+#include <cmath>
 
 UiLayout LayoutBar(float width, float height, float s) {
     const float button = 40, slider = 112, gap = 2, divider = 12, pad = 6, margin = 20;
@@ -41,7 +42,9 @@ UiId HitTest(const UiLayout& layout, float x, float y) {
 }
 
 float VolumeAt(const UiLayout& layout, float x) {
-    return std::clamp((x - layout.track.l) / layout.track.W(), 0.0f, 1.0f);
+    float v = std::clamp((x - layout.track.l) / layout.track.W(), 0.0f, 1.0f) * kMaxVolume;
+    if (std::abs(v - 1.0f) < 0.04f) v = 1.0f;  // sticky 100% so dragging back is easy
+    return v;
 }
 
 std::wstring Tooltip(UiId id, const UiState& s) {

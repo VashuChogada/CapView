@@ -18,7 +18,7 @@ Move the mouse to show the controls. Hover any button to see what it does.
 | | |
 |---|---|
 | Fullscreen | Double-click |
-| Volume | Scroll wheel |
+| Volume | Scroll wheel (up to 200%) |
 | Mute | `M` |
 | Screenshot | `S` (saved to Pictures › CapView) |
 | Settings | Right-click |

@@ -103,7 +103,56 @@ std::wstring Describe(const WAVEFORMATEX* f) {
     return buf;
 }
 
-class DeviceNotifier : public IMMNotificationClient {
+enum class SampleType { Unknown, Float32, Int16, Int24, Int32 };
+
+SampleType SampleTypeOf(const WAVEFORMATEX* f) {
+    bool isFloat = f->wFormatTag == WAVE_FORMAT_IEEE_FLOAT;
+    bool isPcm = f->wFormatTag == WAVE_FORMAT_PCM;
+    if (f->wFormatTag == WAVE_FORMAT_EXTENSIBLE && f->cbSize >= 22) {
+        const GUID& sub = reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(f)->SubFormat;
+        isFloat = IsEqualGUID(sub, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+        isPcm = IsEqualGUID(sub, KSDATAFORMAT_SUBTYPE_PCM);
+    }
+    const UINT32 bytes = f->nChannels ? f->nBlockAlign / f->nChannels : 0;
+    if (isFloat && bytes == 4) return SampleType::Float32;
+    if (isPcm && bytes == 2) return SampleType::Int16;
+    if (isPcm && bytes == 3) return SampleType::Int24;
+    if (isPcm && bytes == 4) return SampleType::Int32;
+    return SampleType::Unknown;
+}
+
+// Multiplies samples in place by gain (> 1), hard-clipping at full scale.
+void ApplyGain(BYTE* p, size_t bytes, SampleType type, float gain) {
+    switch (type) {
+        case SampleType::Float32: {
+            float* s = reinterpret_cast<float*>(p);
+            for (size_t i = 0, n = bytes / 4; i < n; ++i) s[i] = std::clamp(s[i] * gain, -1.0f, 1.0f);
+            break;
+        }
+        case SampleType::Int16: {
+            INT16* s = reinterpret_cast<INT16*>(p);
+            for (size_t i = 0, n = bytes / 2; i < n; ++i)
+                s[i] = INT16(std::clamp(s[i] * gain, -32768.0f, 32767.0f));
+            break;
+        }
+        case SampleType::Int24:
+            for (size_t i = 0; i + 3 <= bytes; i += 3) {
+                int v = int(UINT32(p[i]) << 8 | UINT32(p[i + 1]) << 16 | UINT32(p[i + 2]) << 24) >> 8;
+                v = int(std::clamp(v * gain, -8388608.0f, 8388607.0f));
+                p[i] = BYTE(v), p[i + 1] = BYTE(v >> 8), p[i + 2] = BYTE(v >> 16);
+            }
+            break;
+        case SampleType::Int32: {
+            INT32* s = reinterpret_cast<INT32*>(p);
+            for (size_t i = 0, n = bytes / 4; i < n; ++i)
+                s[i] = INT32(std::clamp(double(s[i]) * gain, -2147483648.0, 2147483647.0));
+            break;
+        }
+        default: break;
+    }
+}
+
+class DeviceNotifier: public IMMNotificationClient {
 public:
     explicit DeviceNotifier(AudioBridge* owner) : owner_(owner) {}
     ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
@@ -304,15 +353,21 @@ HRESULT AudioBridge::Stream(IMMDevice* in, IMMDevice* out) {
     Log(L"audio: \"%s\" (%s) -> \"%s\"", inName.c_str(), Describe(fmt).c_str(), outName.c_str());
     const UINT32 cushion = rate * kCushionMs / 1000;
     const UINT32 maxFill = cushion + rate * kDriftMs / 1000;
+    const SampleType sampleType = SampleTypeOf(rfmt);
+    if (sampleType == SampleType::Unknown) Log(L"audio: unknown sample format, volume boost above 100%% disabled");
     volumeDirty_ = true;
     bool renderStarted = false;
     UINT64 underruns = 0, skips = 0;
+    float gain = 1.0f;  // software boost on top of the session volume, which tops out at 1.0
 
     auto writeFrames = [&](const BYTE* src, UINT32 frames) -> HRESULT {
         BYTE* dst = nullptr;
         HRESULT h = render->GetBuffer(frames, &dst);
         if (FAILED(h)) return h;
-        if (src) memcpy(dst, src, size_t(frames) * block);
+        if (src) {
+            memcpy(dst, src, size_t(frames) * block);
+            if (gain > 1.0f) ApplyGain(dst, size_t(frames) * block, sampleType, gain);
+        }
         return render->ReleaseBuffer(frames, src ? 0 : AUDCLNT_BUFFERFLAGS_SILENT);
     };
 
@@ -339,9 +394,13 @@ HRESULT AudioBridge::Stream(IMMDevice* in, IMMDevice* out) {
     ULONGLONG statStart = GetTickCount64();
 
     while (SUCCEEDED(hr) && !stop_ && !restart_) {
-        if (volumeDirty_.exchange(false) && volume) {
-            volume->SetMasterVolume(volume_, nullptr);
-            volume->SetMute(muted_, nullptr);
+        if (volumeDirty_.exchange(false)) {
+            const float v = volume_;
+            gain = std::max(v, 1.0f);
+            if (volume) {
+                volume->SetMasterVolume(std::min(v, 1.0f), nullptr);
+                volume->SetMute(muted_, nullptr);
+            }
         }
         HANDLE waits[2] = {capEvent, wake_};
         DWORD w = WaitForMultipleObjects(2, waits, FALSE, 500);

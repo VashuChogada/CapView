@@ -127,7 +127,7 @@ static void SetFullscreen(bool on) {
 }
 
 static void SetVolume(float v, bool osd) {
-    g_set.volume = std::clamp(std::round(v * 100.0f) / 100.0f, 0.0f, 1.0f);
+    g_set.volume = std::clamp(std::round(v * 100.0f) / 100.0f, 0.0f, kMaxVolume);
     g_set.muted = false;
     g_audio.SetVolume(g_set.volume);
     g_audio.SetMute(false);
